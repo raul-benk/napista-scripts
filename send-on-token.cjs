@@ -18,10 +18,11 @@ const CONTACT_ID = 'lINzfJt8GA1oJbWhQXNu';
 const API_VERSION = '2021-04-15';
 
 // Endpoint oficial GHL
-const SEND_ENDPOINT = 'https://services.leadconnectorhq.com/conversations/messages';
+const SEND_ENDPOINT =
+  'https://services.leadconnectorhq.com/conversations/messages';
 
 // ======================================================
-// LEITURA DO TOKEN (NAPISTA) – apenas para gatilho
+// LEITURA DO TOKEN (NAPISTA)
 // ======================================================
 function readTokenFromFile(filePath) {
   try {
@@ -73,19 +74,53 @@ function watchFileAndSend() {
 
   let timer = null;
   let lastToken = readTokenFromFile(TOKEN_FILE);
+  let errorNotified = false;
+
+  async function sendErrorOnce(message) {
+    if (errorNotified) return;
+    errorNotified = true;
+
+    try {
+      await sendSms({
+        text:
+          '❌ Erro na Integração NaPista\n\n' +
+          message +
+          '\n\n🛠️ Observe os logs da VPS.'
+      });
+      console.log('[alert] SMS de erro enviado');
+    } catch (err) {
+      console.error('[alert] Falha ao enviar SMS de erro:', err.message);
+    }
+  }
 
   async function handler() {
     try {
-      const currentToken = readTokenFromFile(TOKEN_FILE);
-
-      if (!currentToken || currentToken === lastToken) {
+      if (!fs.existsSync(TOKEN_FILE)) {
+        await sendErrorOnce(
+          'Arquivo de credenciais não encontrado.\nToken ainda não foi gerado.'
+        );
         return;
       }
 
+      const currentToken = readTokenFromFile(TOKEN_FILE);
+
+      if (!currentToken) {
+        await sendErrorOnce(
+          'Token inválido ou ausente.\nFalha na obtenção das credenciais.'
+        );
+        return;
+      }
+
+      if (currentToken === lastToken) {
+        return;
+      }
+
+      // ✅ TOKEN NOVO E VÁLIDO
       lastToken = currentToken;
+      errorNotified = false;
 
       const message =
-        '🚀 Integração ativa: token recebido com sucesso no CRM (teste automático).';
+        '🚀 Integração NaPista ativa!\nToken recebido e validado com sucesso no CRM.';
 
       console.log('[send] enviando SMS de confirmação...');
       const res = await sendSms({ text: message });
@@ -93,17 +128,14 @@ function watchFileAndSend() {
       console.log('[send] SMS enviado com sucesso:');
       console.log(JSON.stringify(res, null, 2));
     } catch (err) {
-      if (err.response) {
-        console.error('[send] erro GHL:', err.response.status);
-        console.error(JSON.stringify(err.response.data, null, 2));
-      } else {
-        console.error('[send] erro:', err.message);
-      }
+      console.error('[watch] erro inesperado:', err.message);
+      await sendErrorOnce('Erro interno ao processar as credenciais.');
     }
   }
 
-  if (fs.existsSync(TOKEN_FILE)) {
-    lastToken = readTokenFromFile(TOKEN_FILE);
+  // Estado inicial
+  if (!fs.existsSync(TOKEN_FILE)) {
+    sendErrorOnce('Arquivo de credenciais ainda não existe.');
   }
 
   fs.watch(TOKEN_FILE, { persistent: true }, () => {
