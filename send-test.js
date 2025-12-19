@@ -17,7 +17,7 @@ const API_VERSION = '2021-04-15';
 const GHL_ENDPOINT = 'https://services.leadconnectorhq.com/conversations/messages';
 
 // Mensagem de teste
-const MESSAGE_TEXT = '🚀 Teste de envio SMS via integração API GHL (ZOI CRM)';
+const MESSAGE_TEXT = '🚀 Teste de envio SMS via integração API (ZOI CRM)';
 
 // ================================
 // FUNÇÃO DE ENVIO
