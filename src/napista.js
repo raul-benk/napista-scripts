@@ -9,10 +9,14 @@ dotenv.config();
  * Opcionalmente, pode adicionar lógica de refresh automático aqui.
  * @returns {import('axios').AxiosInstance}
  */
-function getApiClient() {
+export function getApiClient() {
   const token = getToken();
   if (!token) {
     throw new Error('Token de acesso não encontrado.');
+  }
+
+  if (!process.env.NAPISTA_API_URL) {
+    throw new Error('A variável de ambiente NAPISTA_API_URL não está definida. Verifique seu arquivo .env.');
   }
 
   const apiClient = axios.create({
